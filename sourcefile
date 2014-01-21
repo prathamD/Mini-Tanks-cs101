@@ -1,0 +1,581 @@
+#include<simplecpp>
+void addbuttoncolour(Rectangle &r,int red,int green,int blue){                        //add colour to buttons not containing text
+	r.setFill(true);
+	r.setColor(COLOR(red,green,blue));
+	}
+void addtextcolour(Text &t,int red,int green,int blue){                               //add colour to text declared at various positions
+	t.setFill(true);
+	t.setColor(COLOR(red,green,blue));
+	}
+void addcolour(Polygon &p,int red,int green,int blue){                                //add colour to polygons like arrows,tanks
+	p.setFill(true);
+	p.setColor(COLOR(red,green,blue));
+	}
+void buttons(Rectangle *rec, Text *tex,int sign,bool*bombavail,int&bomb){
+	for(int i=0;i<5;i++){
+		rec[i].reset(0,0,0,0);
+		addbuttoncolour(rec[i],0,51,102);
+		tex[i].reset(0,0," ");
+		addtextcolour(tex[i],255,255,255);
+		}
+	rec[0].reset(500,550,40,40);
+	tex[0].reset(500,550,"NORMAL");
+	if(bombavail[1]==1) {
+		rec[1].reset(425,500,40,40);
+		tex[1].reset(425,500,"FAST");
+		}
+	if(bombavail[2]==1) {
+		rec[2].reset(475,500,40,40);
+		tex[2].reset(475,500,"SPLIT");
+		}
+	if(bombavail[3]==1) {
+		rec[3].reset(525,500,40,40);
+		tex[3].reset(525,500,"FALL");
+		}
+	if(bombavail[4]==1) {
+		rec[4].reset(575,500,40,40);
+		tex[4].reset(575,500,"RETURN");
+		}
+	bomb=-1;
+	while(bomb==-1){
+		int y=getClick();
+		int yx=y/65536;
+		int yy=y%65536;
+		for(int i=1;i<5;i++) {
+			if(bombavail[i]==1){
+				if(yx<=375+50*i+20&&yx>=375+50*i-20&&yy>=480&&yy<=520)
+				 bomb=i;
+				} 
+			else continue; 
+			}
+		if(yx>=480&&yx<=520&&yy>=530&&yy<=570){
+			bomb=0;
+			break;
+			}
+		}
+	for(int i=0;i<5;i++){
+		rec[i].hide();
+		tex[i].hide();
+		}
+	}
+struct twodvel{                                //struct used to create unit vectors in the direction of aim
+	double x;
+	double y;
+	};
+struct Button{                       //struct which creates shapes with text inside it 
+	Rectangle r;
+	Text t;
+	double cx, cy, width, height;
+	Button(double x, double y, double w,double h, string tptr){          //constructor to make the buttons
+		cx = x;
+		cy = y;
+		width = w;
+		height = h;
+		r.reset(cx,cy,w,h);                                             //make the button
+		r.setFill(true);                                                //fill the button with colour
+		r.setColor(COLOR(0,51,102));              
+		t.reset(cx,cy,tptr);                                             //text inside the button
+		t.setFill(true);                                                 //colour the text
+		t.setColor(COLOR(255,255,255));
+		}
+	bool isinside(int clickx, int clicky){                                     //member function to check whether click is inside
+		return (abs(cx - clickx) <= width/2)&& (abs(cy - clicky)<= height/2);   //returns true if clicked inside
+		}
+	void Hide(){                                                //member functions to hide the buttons after use
+		r.hide();
+		t.hide();
+		}
+	void Show(){                                           //member functions to show the buttons for use
+		r.show();
+		t.show();
+		}
+	};
+bool checkbound(double &ballx, double &bally){                  //function to  check the ball location and stop it if it goes out of bounds
+	if(bally<=-150||bally>=418 || ballx>=993 || ballx<=7 || (ballx>=483 && ballx<=517 && bally>=268 && bally<=432)){
+		 return 1;                                               //returns 1 if strikes wall or goes out of screen
+		 }
+	else return 0;
+	}
+
+bool inside(double ballx,double bally,double p2x){                //check whether bomb has hit the tank,             
+	if ((ballx>=p2x-65 && ballx<=p2x+65 && bally>=400 && bally<=425)||(ballx>=p2x-25 && ballx<=p2x+25 && bally>=375 && bally<=400)||(ballx>=p2x-5 && ballx<=p2x+5 && bally>=330 && bally<=390))
+	return true;                                                //returns true if bomb hits the wall
+	else return false;
+	}
+void move(Polygon &p,Polygon &r,int &moves, double&px){             //function to move the tank
+	Text tdash(500,500,"MOVE TANK");
+	addtextcolour(tdash,0,0,0);
+	Button norec(550,550,40,40,"NO");                             //MAKING BUTTON NO
+	Button yesrec(450,550,40,40,"YES");                            //MAKING BUTTON YES
+	wait(1);
+	bool move;
+	while(true){                                              
+		int b=getClick();
+		int bx=b/65536,by=b%65536;
+		if( bx>=430&&bx<=470&&by>=530&&by<=570){
+			move=1;                                    //sets move true if clicked yes
+			norec.Hide();                              //CALLING MEMBER FUNCTION
+			break;
+			}
+		if(bx>=530&&bx<=570&&by>=530&&by<=570){
+			move=0;
+			yesrec.Hide();                            //CALLING MEMBER FUNCTION
+			break;
+			}
+		}
+	if(move==1){                                        //if user wants to move
+		while(true){
+			XEvent event;// returns false if no event has happened.
+			if(checkEvent(&event)){
+				if(event.type == KeyPress){                    //creating event of button press
+					double x=45;
+					char z= charFromEvent(&event);
+					if(z == 'd') {
+						for(int i=0;i<100;i++){
+							r.move(x/100,0);                        //move the tank right if "d" pressed
+							p.move(x/100,0);
+							}
+						moves-=1;
+						px+=50;
+						break;
+						}
+					if(z == 'a') {
+						for(int i=0;i<100;i++){
+							r.move(-x/100,0);p.move(-x/100,0);                        //move the tank right if "a" pressed
+							} 
+						moves-=1;
+						px-=50;
+						break;
+						}
+					}
+				}
+			}
+		}
+	}
+void checkwindstrength(int wind,Polygon &arrow){
+	int green=255,red=25;                                                      //colours the arrow according to wind speed
+	addcolour(arrow,(red*wind),green/(wind),0);                                                        
+	}
+double shoot(int bomb,double unx, double uny, double windspeed,double p1x,double p2x,int sign,Circle &ball,Circle &ball2,Circle &ball3){//Begining of shoot function
+	Button stren(500,650,180,20,"STRENGTH METER");                             //creates strength meter
+	Button fire(500,700,50,25,"FIRE");                                        //creates fire button
+	int strength=0;//Setting strength
+	while(true){ //STRENGTH SETTING STARTS ,this loop sets the strength,changes strength metr colour according to diff. strengths
+		strength=getClick();
+		int powx=strength/65536,powy=strength%65536;
+		if(fire.isinside(powx,powy)) break;   //breaks if fire pressed without setting strength                                                           
+		int green=255,red=1;
+		Rectangle innerstren((410+strength/65536)/2,650,(strength/65536-410),20);
+		if((strength/65536)>590 || (strength/65536)<410 || (strength%65536)<640 || (strength%65536)>660)continue;      //sets colour to the strength meter
+		innerstren.setFill(true);innerstren.setColor(COLOR((red*(strength/65536-360)),(green/(strength/65536-360))*50,0));
+		wait(1);
+		} //STRENGTH SETTING ENDS
+		// FIRE COMMON
+	double vx,vy,ballx=p1x+60*unx,bally=390+60*uny;
+	if(sign==1){                                                      //sets initial speed for tank 1 in the direction of fire
+		vx=(unx*(strength/65536-360)/20)+windspeed/4.5;
+		vy=uny*(strength/65536-360)/20;
+		}                                                                        
+	else if(sign==-1){                                                 //sets initial speed for tank 2 in the direction of fire
+		vx=(unx*(strength/65536-360)/20)-windspeed/4.5;
+		vy=uny*(strength/65536-360)/20;
+		}
+	ball.reset(p1x+60*unx,390+60*uny,7);
+	if(bomb==1||bomb==3||bomb==4){ //BOMB 1/2/3 STARTS
+		while(true){
+			XEvent event;                                                 //event creation for speial bombs
+			if(checkEvent(&event)){
+				 // returns false if no event has happened.
+				if(event.type == KeyPress){
+					char z= charFromEvent(&event);              //should press s for performing bomb speciality
+					if(z == 's') {
+						while(true){
+							if(inside(ballx,bally,p2x))
+								return (1000-abs(p2x-ballx));          //returns score if hit
+							if(checkbound(ballx,bally))
+								return 0;                            //returns if ball goes out of bounds
+							if(bomb==1){
+								ball.move(vx,vy);
+								ballx+=vx;                             //algo. for superspeed bomb 
+								bally+=vy;
+								}
+							else if(bomb==3){
+								if(vy<0)vy=-vy;
+								ball.move(0,vy);
+								vy+=0.1;                        //algo for fall vertical bomb
+								ballx+=0;
+								bally+=vy;
+								wait(0.0005);
+								}
+							else if(bomb==4){
+								ball.move(-vx/2,vy);
+								ballx-=vx/2;
+								bally+=vy;                          //algo for return back bomb
+								vy+=0.1;
+								wait(0.0005);
+								}
+							}
+						}
+					}
+				}
+			else{
+				if(inside(ballx,bally,p2x))
+					return (1000-abs(p2x-ballx));
+				if(checkbound(ballx,bally)) 
+					return 0;
+				ball.move(vx,vy);                                   //algo for special bombs if no key pressed(behaves like normal)
+				vy+=0.1;
+				ballx+=vx;
+				bally+=vy;
+				wait(.01);
+				}
+			}
+		} // BOMB1 ENDS
+		// NORMAL SHOOT
+	if(bomb==0){
+		while(true){
+			if(inside(ballx,bally,p2x))
+				return (1000-abs(p2x-ballx));                        //algo for normal bomb,returns score
+			if(checkbound(ballx,bally)) 
+				return 0;
+			ball.move(vx,vy);
+			vy+=0.1;
+			ballx+=vx;
+			bally+=vy;
+			wait(0.01);
+			}
+		}// DIVISION
+	if(bomb==2){                                              //algo for split bomb
+		while(true){
+			XEvent event;// returns false if no event has happened.
+			if(checkEvent(&event)){ 
+				if(event.type == KeyPress){
+					char z= charFromEvent(&event);//should press s for speed up
+					if(z == 's') {
+						ball.reset(ballx,bally,3.5);
+						ball2.reset(ballx,bally,3.5);
+						ball2.setFill(true);
+						ball2.setColor(COLOR(255,0,0));                           //creation of three small bombs
+						ball3.reset(ballx,bally,3.5);
+						ball3.setFill(true);
+						ball3.setColor(COLOR(255,0,0));
+						double ball2x=ballx,ball3x=ballx,ball2y=bally,ball3y=bally;
+						bool q1=0,q2=0,q3=0;								//checks boudary conditions for  individual balls
+						while(q1==0 || q2==0 || q3 ==0){
+							if(inside(ballx,bally,p2x)){				//sees if ball 1 is inside enemys tank
+								q1=1;
+								ball.reset(0,0,0);
+								}
+							else if(checkbound(ballx,bally)){			//sees whether ball 1 is inside the screen	
+								ballx=1000+p2x;
+								q1=1;
+								ball.hide();
+								}
+							else {
+								beginFrame();
+								ball.move(vx,vy);
+								ballx+=vx;
+								bally+=vy;
+								vy+=0.1;
+								endFrame();
+								wait(0.005);
+								}
+							if(inside(ball2x,ball2y,p2x)){				//sees if ball 2 is inside enemys tank
+								q2=1;
+								ball2.reset(0,0,0);
+								}
+							else if(checkbound(ball2x,ball2y)){			//sees whether ball 2 is inside the screen	
+								ball2x=1000+p2x;
+								q2=1;
+								ball2.reset(0,0,0);
+								}
+							else {
+								beginFrame();
+								ball2.move(vx/1.3,vy);
+								ball2x+=vx/1.3;
+								ball2y+=vy;
+								vy+=0.1;
+								endFrame();
+								wait(0.005);
+								}
+							if(inside(ball3x,ball3y,p2x)){				//sees if ball 3 is inside enemys tank
+								q3=1;
+								ball3.reset(0,0,0);
+								}
+							else if(checkbound(ball3x,ball3y)){			//sees whether ball 3 is inside the screen	
+								ball3x=1000+p2x;
+								q3=1;
+								ball3.reset(0,0,0);
+								}
+							else {
+								beginFrame();
+								ball3.move(1.3*vx,vy);
+								ball3x+=vx*1.3;
+								ball3y+=vy;
+								vy+=0.1;
+								endFrame();
+								wait(0.005);
+								}
+							}
+							return ((0.6*(1000-abs(p2x-ballx))) + (0.6*(1000-abs(p2x-ball2x))) + (0.6*(1000-abs(p2x-ball3x))));
+						}
+					}
+				}
+			else{
+				if(inside(ballx,bally,p2x))
+					return 0;
+				if(checkbound(ballx,bally)) 
+					return 0;
+				ball.move(vx,vy);
+				vy+=0.1;
+				ballx+=vx;
+				bally+=vy;
+				wait(.01);
+				}
+			}
+		}
+	else 
+		return 0;
+}
+twodvel rotate(double a1[][2],Polygon &p,double px,int sign){                    //rotate function starts
+	twodvel unit;unit.x=0;unit.y=-1;
+	Button setangle(500,600,50,25,"SET");                                      //add set button
+	while(true){
+		int c=getClick();
+		int x=c/65536,y=c%65536;
+		if(x<=525&&x>=475&&y>=587.5&&y<=612.5) 
+			return unit;
+		if(x==px && y==390)
+			continue;
+		float dx=(x-px),dy=(y-390.0),dist=sqrt(dx*dx+dy*dy);				//unit vecter along the direction of click
+		dx=dx/dist;
+		dy=dy/dist;
+		unit.x=dx;
+		unit.y=dy;
+		double a[4][2];
+		a[0][0]=5*dy;
+		a[0][1]=-5*dx;
+		a[1][0]=-5*dy;
+		a[1][1]=5*dx;
+		a[2][0]=a[1][0]+60*dx;						//final coordinates of hte gun after rotate
+		a[2][1]=(a[1][1]+60*dy);
+		a[3][0]=a[0][0]+60*dx;
+		a[3][1]=(a[0][1]+60*dy);
+		double diff[4][2];
+		for(int i=0;i<4;i++){
+			for(int j=0;j<2;j++)
+				diff[i][j]=a[i][j]-a1[i][j];
+			}
+		repeat(10){
+			for(int i=0;i<4;i++){
+				for(int j=0;j<2;j++)
+					a1[i][j]+=diff[i][j]/10;
+				}
+			p.reset(px,390,a1,4);
+			}
+		if(sign==1)
+			addcolour(p,72,118,255);
+		else 
+			addcolour(p,0,255,0);
+	}
+}
+int main(){
+	int leave=0;
+	initCanvas("MAIN MENU",1000,800);
+	Button name(500,150,100,25,"POCKET TANKS");
+	Button play(500,400,50,25,"PLAY");
+	Button instructions(500,500,100,25,"INSTRUCTIONS");
+	Button exit(500,600,50,25,"EXIT");
+	double a[8][2]={{20,0},{45,0},{45,15},{-45,15},{-45,0},{-20,0},{-10,-10},{10,-10}};	//a,b are tanks for menu screen
+	double b[4][2]={{5,0},{-5,0},{-5,-35},{5,-35}};
+	Polygon tank(200,100,a,8);Polygon tank1main(800,220,a,8);						//tank,tank1main,gun,gun1,are elements of main screen
+	Polygon gun(200,95,b,4);Polygon gun1(800,215,b,4);int x=1,j=0,z=1;tank.setFill(true);
+	tank.setColor(COLOR("red"));
+	tank1main.setFill(true);
+	tank1main.setColor(COLOR("green"));
+	gun.setFill(true);
+	gun.setColor(COLOR("red"));
+	gun1.setFill(true);
+	gun1.setColor(COLOR("green"));int i=1;
+	while(true){
+		XEvent event;
+		if(checkEvent(&event)){						//scribble for mouse button press
+			if(event.type == ButtonPress){
+				tank1main.hide();tank.hide();gun.hide();gun1.hide();
+		int clx=event.xkey.x,cly=event.xkey.y;
+		if(instructions.isinside(clx,cly)){
+			name.Hide();
+			play.Hide();
+			instructions.Hide();
+			exit.Hide();
+			Text heading(500,100,"HOW TO PLAY");				//goes into instructions page
+			heading.setFill(true);
+			heading.setColor(COLOR(255,0,0));
+			Text point1(500,250,"# It is a two player game. #");
+			Text point2(500,350,"# Every player has 10 turns to aim and shoot other player's tank with a bomb. #");
+			Text point3(500,450,"# Each player has 4 special bombs which can be used only once. #");
+			Text point4(500,550,"# A tank can move maximum of four times.#");
+			Text point5(500,650,"# The player having highest points at the end wins the game. #");
+			Button back(500,700,50,25,"BACK");
+			while(true){
+				int z=getClick();
+				int zclx=z/65536,zcly=z%65536;
+				if(back.isinside(zclx,zcly)){
+					back.Hide();
+					name.Show();
+					play.Show();
+					instructions.Show();
+					exit.Show();
+					break;
+					}
+				}
+			}
+		if(exit.isinside(clx,cly)){
+			leave=1;
+			closeCanvas();
+            break;			
+			}	//for exit button
+		if(play.isinside(clx,cly)){
+			closeCanvas();			//for starting main screen closing the mainpage screen
+			break;
+			}
+		}}
+		else{
+			tank1main.show();tank.show();gun.show();gun1.show();
+			tank.forward(z);tank1main.forward(-z);
+			gun.forward(z);gun1.forward(-z);			//front animation of the tanks
+			if(j==45||j==-45) {x=-x;j=-j;}
+			j=j+1;i++;
+			if(i%600==0)
+			z=-z;
+		}
+	}if(leave==0){
+	bool bombavailable1[5],bombavailable2[5];			//availability of special bombs for tank1 and tank2
+	for(int i=0;i<5;i++){
+		bombavailable1[i]=1;
+		bombavailable2[i]=1;
+		}
+	initCanvas("Play",1000,800);
+	Circle ball(0,0,0),ball2(0,0,0),ball3(0,0,0);
+	Rectangle outer(500,212.5,1000,425);
+	addbuttoncolour(outer,0,0,0);
+	
+	twodvel unitvector;
+	int sign=1;
+	double score1=0,score2=0;
+	double pos1y=400,pos2y=400;
+	double pos1x=250,pos2x=750;
+	double tan1[10][2]={{-25,0},{-25,-15},{-15,-25},{15,-25},{25,-15},{25,0},{45,0},{45,25},{-45,25},{-45,0}},tan2[10][2]={{-25,0},{-25,-15},{-15,-25},{15,-25},{25,-15},{25,0},{45,0},{45,25},{-45,25},{-45,0}};
+	double arroposi[7][2]={{0,-15},{0,-30},{45,0},{0,30},{0,15},{-60,15},{-60,-15}};//arrow of wind for positive values of speed
+	double arronega[7][2]={{0,-15},{0,-30},{-45,0},{0,30},{0,15},{60,15},{60,-15}};//arrow of wind for negative values of speed
+	double arronormal[7][2]={{-15,-10},{-14,-10},{-13,-10},{-12,-10},{15,-10},{15,10},{-15,10}};//arrow of wind for zero value of speed
+	int wind=0;
+	Polygon tank2(pos2x,400,tan2,10);
+	Polygon tank1(pos1x,400,tan1,10);
+	Polygon arrow(500,50,arronormal,7);
+	Text windvel(500,100,wind);
+	Text pl1(80,10,"Player 1");
+	addtextcolour(pl1,255,255,255);
+	Text scoreof1(80,20,"0");
+	addtextcolour(scoreof1,255,255,255);
+	Text pl2(920,10,"Player 2");
+	addtextcolour(pl2,255,255,255);
+	Text scoreof2(20,20,"0");		//score of player 2
+	addtextcolour(scoreof2,255,255,255);
+	int movesleftof1=4,movesleftof2=4;
+	Text movesof1(80,30,"no. of moves left:");
+	addtextcolour(movesof1,255,255,255);
+	Text noofmoves1(140,30,movesleftof1);
+	addtextcolour(noofmoves1,255,255,255);
+	Text movesof2(920,30,"no. of moves left:");
+	addtextcolour(movesof2,255,255,255);
+	Text noofmoves2(980,30,movesleftof2);
+	addtextcolour(noofmoves2,255,255,255);
+	Rectangle wall(500,355,20,140);
+	addbuttoncolour(wall,178,34,34);
+	//16 game program starts here
+	
+	for(int k=0;k<16;k++){	//Circle ball(0,0,0),ball2(0,0,0),ball3(0,0,0);
+		
+		ball.reset(0,0,0);
+		ball2.reset(0,0,0);
+		ball3.reset(0,0,0);
+		ball.setFill(true);
+		ball.setColor(COLOR(255,0,0));
+		int timcurr=time(0)%10;             //returns different timein the range of 0-9 
+		wind=int(randuv(-2,2))*timcurr;tank1.reset(pos1x,400,tan1,10); //multiplies wind with time to generate random winds
+		addcolour(tank1,72,118,255);
+		double a1[4][2]={{-5,0},{5,0},{5,-60},{-5,-60}};  //gun 1 coordi.
+		double a2[4][2]={{-5,0},{5,0},{5,-60},{-5,-60}};	//gun 2 coordi
+		Polygon p1(pos1x,pos1y-10,a1,4),p2(pos2x,pos2y-10,a2,4);    //creates guns
+		addcolour(p1,72,118,255);
+		addcolour(p2,0,255,0);
+		tank2.reset(pos2x,400,tan2,10);
+		addcolour(tank2,0,255,0);
+		scoreof1.reset(80,20,score1);
+		scoreof2.reset(920,20,score2);
+		if(sign==1){
+			if(wind>0){                                         
+				arrow.reset(500,50,arroposi,7);
+				windvel.reset(500,50,abs(wind));
+			}
+			else if(wind<0){
+				arrow.reset(500,50,arronega,7);
+				windvel.reset(500,50,abs(wind));                      //creates arrows for diiferent winds
+			}
+			else{
+				arrow.reset(500,50,arronormal,7);
+				addcolour(arrow,255,255,255);							//makes white rectangle for wind=0
+				windvel.reset(500,50,wind);
+				}
+			if(wind!=0)checkwindstrength(abs(wind),arrow);				//colours different arrow for diff winds
+			int bomb=-1;
+			if(movesleftof1>0){
+				move(tank1,p1,movesleftof1,pos1x);//tdash.hide();
+				noofmoves1.reset(140,30,movesleftof1);
+				}
+			Rectangle bombrec[5];										//creates bomb buttons
+			Text bombtext[5];
+			buttons(bombrec,bombtext,1,bombavailable1,bomb);
+			unitvector=rotate(a1,p1,pos1x,sign);						//returns unit vector in the direction of fire
+			score1+=0.1*shoot(bomb,unitvector.x,unitvector.y,wind,pos1x,pos2x,sign,ball,ball2,ball3);	//returns score,fires all bombs
+			if(bomb>0) 
+				bombavailable1[bomb]=0;
+			}
+		if(sign==-1){															//similar as sign==1
+			if(wind>0){
+				arrow.reset(500,50,arronega,7);
+				windvel.reset(500,50,abs(wind));
+				}
+			else if(wind<0){
+				arrow.reset(500,50,arroposi,7);
+				windvel.reset(500,50,abs(wind));
+			}
+			else{
+				arrow.reset(500,50,arronormal,7);
+				addcolour(arrow,255,255,255);
+				windvel.reset(500,50,wind);
+				}
+			if(wind!=0)
+				checkwindstrength(abs(wind),arrow);
+			if(movesleftof2>0){
+				move(tank2,p2,movesleftof2,pos2x);//tdash.hide();
+				noofmoves2.reset(980,30,movesleftof2);
+				}
+			Rectangle bombbutton[5];Text bombtext[5];
+			int bomb=-1;
+			buttons(bombbutton,bombtext,sign,bombavailable2,bomb);
+			unitvector=rotate(a2,p2,pos2x,sign);
+			score2+=0.1*shoot(bomb,unitvector.x,unitvector.y,wind,pos2x,pos1x,sign,ball,ball2,ball3);
+			if(bomb>0) bombavailable2[bomb]=0;
+			}
+			sign=-1*sign;
+			} //for loop ends
+	if(score1>score2)
+		cout<<"player 1 wins"<<endl;
+	else if(score2>score1)
+		cout<<"player 2 wins"<<endl;
+	else
+		cout<<"draw"<<endl;
+} //main program ends
+}
